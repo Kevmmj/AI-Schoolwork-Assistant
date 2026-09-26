@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>수행평가 AI 플래너</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-100 min-h-screen font-sans text-slate-800 p-4 md:p-8">
+
+  <header class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-xl shadow-md">
+        <i class="fa-solid fa-sparkles"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">수행평가 AI 플래너</h1>
+        <p class="text-xs text-slate-500">유인물 분석 및 글쓰기 피드백 지원</p>
+      </div>
+    </div>
+    
+    <div class="flex flex-wrap items-center gap-2 text-sm">
+      <button onclick="requestNotificationPermission()" class="bg-white border border-slate-200 hover:bg-slate-50 px-3 py-2 rounded-lg flex items-center gap-2 text-slate-700 shadow-sm transition">
+        <i class="fa-regular fa-bell text-indigo-600"></i> 알림 설정
+      </button>
+      <button onclick="openApiKeyModal()" class="bg-white border border-slate-200 hover:bg-slate-50 px-3 py-2 rounded-lg flex items-center gap-2 text-slate-700 shadow-sm transition">
+        <i class="fa-solid fa-key text-amber-500"></i> API 키 설정
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <section class="lg:col-span-5 space-y-6">
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center mb-4">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-file-invoice text-indigo-600"></i>
+            <h2 class="font-bold text-slate-800">수행평가 파일 분석 및 등록</h2>
+          </div>
+        </div>
+        
+        <p class="text-xs text-slate-500 mb-4">선생님이 주신 유인물(사진/PDF)을 올리거나 내용을 직접 입력해 주세요.</p>
+
+        <form id="evalForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+          <div class="relative border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:bg-slate-50 transition cursor-pointer" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" accept="image/png, image/jpeg, application/pdf" class="hidden" onchange="handleFileSelect(event)">
+            <i class="fa-solid fa-cloud-arrow-up text-3xl text-indigo-400 mb-2"></i>
+            <p class="text-sm font-semibold text-slate-700">유인물 이미지(PNG, JPG)나 PDF 업로드</p>
+            <p class="text-xs text-slate-400 mt-1">클릭하여 파일을 선택해 보세요 (최대 2MB)</p>
+            <p id="fileNameDisplay" class="text-xs font-bold text-indigo-600 mt-3 hidden"></p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">과목명</label>
+              <input type="text" id="subjectInput" placeholder="예: 공통영어 2" required
+                class="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">마감 일자</label>
+              <input type="date" id="deadlineInput" required
+                class="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">수행평가 주제/제목</label>
+            <input type="text" id="titleInput" placeholder="예: 지속 가능한 미래를 위한 글쓰기" required
+              class="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">상세 내용 (파일 첨부 시 요약만 입력)</label>
+            <textarea id="contentInput" rows="2" placeholder="가이드라인, 필수 포함 키워드 등"
+              class="w-full text-sm p-3 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">
+              나의 작성 초안 <span class="text-indigo-500 font-normal">(선택 - 문법 및 구조 교정용)</span>
+            </label>
+            <textarea id="draftInput" rows="3" placeholder="작성하신 글이 있다면 이곳에 붙여넣어 주세요."
+              class="w-full text-sm p-3 border border-indigo-100 bg-indigo-50/30 rounded-lg focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+          </div>
+
+          <button type="submit" id="submitBtn"
+            class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> AI 분석 & 일정 등록하기
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section class="lg:col-span-7 space-y-6">
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 text-center shadow-sm">
+          <div class="text-xs text-slate-500 font-medium mb-1">전체 수행평가</div>
+          <div id="statTotal" class="text-2xl font-extrabold text-slate-800">0개</div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 text-center shadow-sm">
+          <div class="text-xs text-amber-600 font-medium mb-1">진행 중 / 임박</div>
+          <div id="statPending" class="text-2xl font-extrabold text-amber-500">0개</div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 text-center shadow-sm">
+          <div class="text-xs text-emerald-600 font-medium mb-1">완료됨</div>
+          <div id="statDone" class="text-2xl font-extrabold text-emerald-500">0개</div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-list-check text-indigo-600"></i> 수행평가 기록 및 피드백
+          </h2>
+          <span id="saveStatus" class="text-xs text-emerald-600 font-medium transition-opacity duration-300 opacity-0">
+            <i class="fa-solid fa-check-circle"></i> 자동 저장됨
+          </span>
+        </div>
+        <div id="taskList" class="space-y-4"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="apiModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+      <h3 class="text-lg font-bold text-slate-800 mb-2">Google Gemini API Key 설정</h3>
+      <p class="text-xs text-slate-500 mb-4">API Key를 입력하셔야 파일 분석 및 실제 AI 기능을 사용할 수 있습니다.</p>
+      <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full text-sm px-3 py-2 border border-slate-200 rounded-lg mb-4 focus:outline-none focus:border-indigo-500">
+      <div class="flex justify-end gap-2">
+        <button onclick="closeApiKeyModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">취소</button>
+        <button onclick="saveApiKey()" class="px-4 py-2 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let tasks = JSON.parse(localStorage.getItem('ai_eval_tasks')) || [];
+    let geminiApiKey = localStorage.getItem('gemini_api_key') || '';
+    
+    let uploadedFileBase64 = null;
+    let uploadedFileMimeType = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderTasks();
+      if (Notification.permission === "granted") checkD2Notifications();
+    });
+
+    function saveTasks() {
+      localStorage.setItem('ai_eval_tasks', JSON.stringify(tasks));
+      renderTasks();
+      showSaveStatus();
+    }
+
+    function showSaveStatus() {
+      const statusEl = document.getElementById('saveStatus');
+      statusEl.classList.remove('opacity-0');
+      setTimeout(() => statusEl.classList.add('opacity-0'), 2000);
+    }
+
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (file.size > 2 * 1024 * 1024) {
+        alert("2MB 이하의 파일만 업로드 가능합니다.");
+        event.target.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        uploadedFileBase64 = dataUrl.split(',')[1];
+        uploadedFileMimeType = file.type;
+        
+        const display = document.getElementById('fileNameDisplay');
+        display.innerText = `📎 첨부됨: ${file.name}`;
+        display.classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function requestNotificationPermission() {
+      if (!("Notification" in window)) return alert("브라우저가 알림을 지원하지 않습니다.");
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          alert("알림이 활성화되었습니다!");
+          checkD2Notifications();
+        }
+      });
+    }
+
+    function checkD2Notifications() {
+      if (Notification.permission !== "granted") return;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      let isUpdated = false;
+
+      tasks.forEach(task => {
+        if (task.completed || task.notified) return;
+        const deadline = new Date(task.deadline);
+        deadline.setHours(0, 0, 0, 0);
+        const diffDays = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 2) {
+          new Notification(`[수행평가 D-2] ${task.subject}`, { body: `'${task.title}' 마감이 2일 남았습니다!` });
+          task.notified = true; 
+          isUpdated = true;
+        }
+      });
+      if (isUpdated) saveTasks();
+    }
+
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      
+      const subject = document.getElementById('subjectInput').value;
+      const deadline = document.getElementById('deadlineInput').value;
+      const title = document.getElementById('titleInput').value;
+      const content = document.getElementById('contentInput').value;
+      const draft = document.getElementById('draftInput').value;
+      const submitBtn = document.getElementById('submitBtn');
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 파일 분석 및 교정 중...`;
+
+      let aiResponse = "";
+      let hasAttachment = uploadedFileBase64 !== null;
+      
+      if (geminiApiKey) {
+        try {
+          aiResponse = await fetchGeminiAI(subject, title, content, draft, uploadedFileBase64, uploadedFileMimeType);
+        } catch (err) {
+          console.error(err);
+          alert("API 호출 실패! 키가 등록되어 있지 않거나 잘못되었습니다.");
+          aiResponse = generateFallbackOutline(draft);
+        }
+      } else {
+        await new Promise(r => setTimeout(r, 600)); 
+        aiResponse = generateFallbackOutline(draft);
+      }
+
+      const newTask = {
+        id: Date.now(),
+        subject,
+        title,
+        content,
+        draft,
+        hasAttachment,
+        deadline,
+        outline: aiResponse,
+        completed: false,
+        notified: false
+      };
+
+      tasks.unshift(newTask);
+      saveTasks();
+      checkD2Notifications(); 
+
+      document.getElementById('evalForm').reset();
+      document.getElementById('fileNameDisplay').classList.add('hidden');
+      uploadedFileBase64 = null;
+      uploadedFileMimeType = null;
+      
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> AI 분석 & 일정 등록하기`;
+    }
+
+    async function fetchGeminiAI(subject, title, content, draft, fileBase64, mimeType) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
+      
+      let prompt = `과목: ${subject}\n수행평가 제목: ${title}\n추가 설명: ${content}\n\n`;
+      
+      if (fileBase64) {
+        prompt += `첨부된 이미지나 문서를 꼼꼼히 분석하여 선생님의 요구사항과 채점 기준을 파악해 줘.\n\n`;
+      }
+      
+      if (draft.trim() !== "") {
+        prompt += `학생의 초안:\n"${draft}"\n\n이 초안을 분석하여 다음 3가지를 마크다운 없이 간결한 텍스트로 작성해줘:\n1. [문법/맞춤법 교정]\n2. [구조 및 내용 피드백]\n3. [감점 방지 팁 (첨부파일 및 설명 기준)]`;
+      } else {
+        prompt += `이 정보를 바탕으로 글쓰기 개요(아웃라인)를 마크다운 없이 간결한 텍스트로 작성해줘:\n1. [서론] 도입부 팁\n2. [본론] 핵심 구성 아웃라인\n3. [결론] 및 필수 체크리스트`;
+      }
+
+      const parts = [{ text: prompt }];
+      
+      if (fileBase64 && mimeType) {
+        parts.push({
+          inlineData: {
+            mimeType: mimeType,
+            data: fileBase64
+          }
+        });
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: parts }] })
+      });
+
+      if (!response.ok) {
+        throw new Error('API Error');
+      }
+      const data = await response.json();
+      return data.candidates[0].content.parts[0].text;
+    }
+
+    function generateFallbackOutline(draft) {
+      if (draft.trim() !== "") {
+        return `📌 [AI 피드백 가이드]\n1. 맞춤법 및 문법 점검을 권장합니다.\n2. 글의 구조가 논리적인지 다시 확인하세요.\n(※ 실제 파일 분석을 원하시면 우측 상단 API 키를 설정해 주세요)`;
+      } else {
+        return `📌 [AI 기본 아웃라인 가이드]\n1. 서론 작성\n2. 본론 핵심 구성\n3. 결론 및 마무리\n(※ 실제 파일 분석을 원하시면 우측 상단 API 키를 설정해 주세요)`;
+      }
+    }
+
+    function renderTasks() {
+      const taskList = document.getElementById('taskList');
+      taskList.innerHTML = '';
+      let doneCount = 0, pendingCount = 0;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (tasks.length === 0) {
+        taskList.innerHTML = `<p class="text-center text-xs text-slate-400 py-8">등록된 수행평가가 없습니다.</p>`;
+      }
+
+      tasks.forEach(task => {
+        if (task.completed) doneCount++;
+        else pendingCount++;
+
+        const deadline = new Date(task.deadline);
+        deadline.setHours(0, 0, 0, 0);
+        const diffDays = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
+
+        let badgeHtml = '';
+        if (task.completed) {
+          badgeHtml = `<span class="bg-slate-100 text-slate-500 text-xs px-2.5 py-1 rounded-full font-bold">완료</span>`;
+        } else if (diffDays <= 2 && diffDays >= 0) {
+          badgeHtml = `<span class="bg-rose-500 text-white text-xs px-2.5 py-1 rounded-full font-bold animate-pulse">D-${diffDays} (임박)</span>`;
+        } else if (diffDays < 0) {
+          badgeHtml = `<span class="bg-slate-200 text-slate-600 text-xs px-2.5 py-1 rounded-full font-bold">마감됨</span>`;
+        } else {
+          badgeHtml = `<span class="bg-indigo-50 text-indigo-600 text-xs px-2.5 py-1 rounded-full font-bold">D-${diffDays}</span>`;
+        }
+
+        const draftLabelHtml = task.draft ? `<span class="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">문법 교정됨</span>` : '';
+        const attachmentLabelHtml = task.hasAttachment ? `<span class="ml-1 text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded"><i class="fa-solid fa-paperclip"></i> 첨부됨</span>` : '';
+
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-xl border transition ${task.completed ? 'bg-slate-50 opacity-75' : 'bg-white hover:border-indigo-300'}`;
+        card.innerHTML = `
+          <div class="flex justify-between items-start gap-2 mb-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded">${task.subject}</span>
+              <h3 class="font-bold text-slate-800 text-sm ${task.completed ? 'line-through text-slate-500' : ''}">${task.title}</h3>
+              ${draftLabelHtml}
+              ${attachmentLabelHtml}
+            </div>
+            ${badgeHtml}
+          </div>
+          <div class="bg-slate-50 p-3 rounded-lg my-3 border border-slate-100 text-xs text-slate-700 whitespace-pre-line leading-relaxed font-mono overflow-y-auto max-h-60">
+            ${task.outline}
+          </div>
+          <div class="flex justify-between items-center text-xs text-slate-400 pt-2 border-t border-slate-100">
+            <span>마감일: ${task.deadline}</span>
+            <div class="flex items-center gap-3">
+              <button onclick="toggleComplete(${task.id})" class="${task.completed ? 'text-slate-500' : 'text-emerald-600 font-bold'} hover:underline">
+                ${task.completed ? '진행 중' : '완료'}
+              </button>
+              <button onclick="deleteTask(${task.id})" class="text-rose-500 hover:underline">삭제</button>
+            </div>
+          </div>
+        `;
+        taskList.appendChild(card);
+      });
+
+      document.getElementById('statTotal').innerText = `${tasks.length}개`;
+      document.getElementById('statPending').innerText = `${pendingCount}개`;
+      document.getElementById('statDone').innerText = `${doneCount}개`;
+    }
+
+    function toggleComplete(id) {
+      tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+      saveTasks();
+    }
+
+    function deleteTask(id) {
+      if (confirm('해당 기록을 삭제하시겠습니까?')) {
+        tasks = tasks.filter(t => t.id !== id);
+        saveTasks();
+      }
+    }
+
+    function openApiKeyModal() {
+      document.getElementById('apiKeyInput').value = geminiApiKey;
+      document.getElementById('apiModal').classList.remove('hidden');
+      document.getElementById('apiModal').classList.add('flex');
+    }
+    
+    function closeApiKeyModal() {
+      document.getElementById('apiModal').classList.add('hidden');
+      document.getElementById('apiModal').classList.remove('flex');
+    }
+    
+    function saveApiKey() {
+      geminiApiKey = document.getElementById('apiKeyInput').value.trim();
+      localStorage.setItem('gemini_api_key', geminiApiKey);
+      closeApiKeyModal();
+      alert('API 키가 저장되었습니다!');
+    }
+  </script>
+</body>
+</html>
